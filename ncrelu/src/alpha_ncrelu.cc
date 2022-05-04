@@ -3,18 +3,18 @@
 #include "alpha_ncrelu.h"
 #include "alpha_ncrelu_kernel.cuh"
 
-void AlphaNCReLUForwardCudaInterface(const float *input, 
-                                     const size_t batch, 
-                                     const size_t channel, 
-                                     const size_t height, 
+void AlphaNCReLUForwardCudaInterface(const float *input,
+                                     const size_t batch,
+                                     const size_t channel,
+                                     const size_t height,
                                      const size_t width,
                                      const float *ret);
 
 void AlphaNCReLUBackwardCudaInterface(const float *grad_output,
                                       const float *input,
-                                      const size_t batch, 
-                                      const size_t channel, 
-                                      const size_t height, 
+                                      const size_t batch,
+                                      const size_t channel,
+                                      const size_t height,
                                       const size_t width,
                                       float *ret);
 
@@ -29,7 +29,7 @@ torch::Tensor AlphaNCReLUForward(const torch::Tensor input)
     else if (input.device().type() == torch::kCUDA)
     {
         TORCH_CHECK(input.dtype() == torch::kFloat32,
-                   "DataType not implemented");
+                    "DataType not implemented");
         size_t batch = input.size(0);
         size_t channel = input.size(1);
         size_t height = input.size(2);
@@ -37,23 +37,21 @@ torch::Tensor AlphaNCReLUForward(const torch::Tensor input)
 
         auto options = torch::TensorOptions().dtype(input.dtype()).device(input.device().type());
 
-	    auto ret = torch::zeros({batch, channel * 2, height, width}, options);
-	    AlphaNCReLUForwardCudaInterface(input.data_ptr<float>(),
-			                            batch,
+        auto ret = torch::zeros({batch, channel * 2, height, width}, options);
+        AlphaNCReLUForwardCudaInterface(input.data_ptr<float>(),
+                                        batch,
                                         channel,
                                         height,
                                         width,
                                         ret.data_ptr<float>());
 
         return ret;
-            
     }
     else
     {
         AT_ERROR("No such device: ", input.device());
     }
 }
-
 
 torch::Tensor AlphaNCReLUBackward(torch::Tensor grad_out, torch::Tensor input)
 {
@@ -67,8 +65,8 @@ torch::Tensor AlphaNCReLUBackward(torch::Tensor grad_out, torch::Tensor input)
         float *ret_data_ptr = ret.data_ptr<float>();
         for (size_t i = 0; i < size; i++)
         {
-            *(ret_data_ptr + i) = *(input_data_ptr + i) * *(grad_out_data_ptr + i) - 
-            0.5 * *(input_data_ptr + i) * *(grad_out_data_ptr + i + size);
+            *(ret_data_ptr + i) = *(input_data_ptr + i) * *(grad_out_data_ptr + i) -
+                                  0.5 * *(input_data_ptr + i) * *(grad_out_data_ptr + i + size);
         }
 
         return ret;
@@ -78,7 +76,7 @@ torch::Tensor AlphaNCReLUBackward(torch::Tensor grad_out, torch::Tensor input)
     {
         TORCH_CHECK(input.dtype() == torch::kFloat32,
                     "DataType not implemented");
-	    size_t batch = input.size(0);
+        size_t batch = input.size(0);
         size_t channel = input.size(1);
         size_t height = input.size(2);
         size_t width = input.size(3);
@@ -97,12 +95,10 @@ torch::Tensor AlphaNCReLUBackward(torch::Tensor grad_out, torch::Tensor input)
     {
         AT_ERROR("No such device: ", input.device());
     }
-
 }
 
-static auto registry = torch::RegisterOperators("haitao::AlphaNCReLU", &AlphaNCReLUForward);
-
-PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {	// 绑定部分
+PYBIND11_MODULE(TORCH_EXTENSION_NAME, m)
+{ // 绑定部分
     m.def("forward", &AlphaNCReLUForward, "AlphaNCReLU forward");
     m.def("backward", &AlphaNCReLUBackward, "AlphaNCReLU backward");
 }
